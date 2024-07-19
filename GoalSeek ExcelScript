@@ -1,0 +1,42 @@
+//This officescript is used to replicate GoalSeek functionality from Excel in MS Power Automate - PLEASE NOTE the rounding functionality was a user request and will propably not fit everybody
+
+
+function main(workbook: ExcelScript.Workbook, sheetName: string, targetCellAddress: string, changingCellAddress: string, targetValue: number, maxIterations: number, tolerance: number) {
+    // Access the worksheet and the necessary cells
+    let sheet = workbook.getWorksheet(sheetName);
+    let targetCell = sheet.getRange(targetCellAddress); // Cell where the target value is
+    let changingCells = sheet.getRange(changingCellAddress).getValues()[0]; // Cells that will be changed
+
+    // Perform the goal seek
+    goalSeek(sheet, changingCells, targetCell, targetValue, maxIterations, tolerance, changingCellAddress);
+
+    // Round the final values to ensure they are integers
+    let finalChangingCells = changingCells.map(value => Math.round(value));
+
+    // Set the rounded values back to the sheet
+    sheet.getRange(changingCellAddress).setValues([finalChangingCells]);
+
+    // Return the final values of the changing cells and the target cell
+    return {
+        changingCells: finalChangingCells,
+        finalTargetValue: sheet.getRange(targetCellAddress).getValue()
+    };
+}
+
+function goalSeek(sheet: ExcelScript.Worksheet, changingCells: number[], targetCell: ExcelScript.Range, targetValue: number, maxIterations: number, tolerance: number, changingCellAddress: string) {
+    let iteration = 0;
+    while (Math.abs(targetCell.getValue() - targetValue) > tolerance && iteration < maxIterations) {
+        let currentValue = targetCell.getValue();
+        let delta = (targetValue - currentValue) / targetValue;
+
+        // Update each changing cell by distributing the delta proportionally
+        for (let i = 0; i < changingCells.length; i++) {
+            changingCells[i] *= (1 + delta);
+        }
+
+        // Set the new values back to the sheet
+        sheet.getRange(changingCellAddress).setValues([changingCells]);
+
+        iteration++;
+    }
+}
