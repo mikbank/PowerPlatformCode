@@ -1,0 +1,5 @@
+function main(workbook: ExcelScript.Workbook) {
+    
+//refreshes connectors to Power Platform
+workbook.refreshAllDataConnections
+}
