@@ -1,0 +1,39 @@
+/**
+ * Power Automate Office Script: dump a JSON array of records into a table
+ * @param workbook The Excel workbook
+ * @param rowsJson A JSON string of an array of objects (header names → cell values)
+ */
+function main(
+    workbook: ExcelScript.Workbook,
+    rowsJson: string
+) {
+    // 1) Parse into an array of records whose values may be string, number, boolean or null
+    const parsed = JSON.parse(rowsJson) as Array<Record<string, string | number | boolean | null>>;
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+        console.log("No data found");
+        return;
+    }
+
+    // 2) Extract header names from the first record (preserves the order of insertion)
+    const headers = Object.keys(parsed[0]);
+
+    // 3) Build a 2D array: first row = headers; each subsequent row = values in header order
+    const rows: (string | number | boolean | null)[][] = [
+        headers,
+        ...parsed.map(record => headers.map(h => record[h]))
+    ];
+
+    // 4) Grab the sheet and clear it
+    const sheet = workbook.getActiveWorksheet();
+    sheet.getUsedRange()?.clear(ExcelScript.ClearApplyTo.contents);
+
+    // 5) Bulk-write and convert to a table
+    const rowCount = rows.length;
+    const colCount = headers.length;
+    const range = sheet.getRangeByIndexes(0, 0, rowCount, colCount);
+    range.setValues(rows);
+
+    // 6) Turn that block into an Excel table (first row = headers)
+    const addressOnly = range.getAddress().split("!")[1];
+    sheet.addTable(addressOnly, /*hasHeaders*/ true);
+}
